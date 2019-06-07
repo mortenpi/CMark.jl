@@ -3,6 +3,9 @@ uuid = "510bb3d4-7ace-11e9-09a6-63422760e49a"
 authors = ["Morten Piibeleht <morten.piibeleht@gmail.com>"]
 version = "0.1.0"
 
+[deps]
+Markdown = "d6f4376e-aef5-505a-96c1-9c027394607a"
+
 [compat]
 julia = "1"
 
