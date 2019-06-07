@@ -1,5 +1,6 @@
 module CMark
 import Markdown
+using Compat
 
 const libcmark = joinpath(@__DIR__, "..", "deps", "libcmark.so")
 
