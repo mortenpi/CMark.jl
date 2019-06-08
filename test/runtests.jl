@@ -4,8 +4,8 @@ import Markdown
 
 @testset "CMark.jl" begin
     # Write your own tests here.
-    @test CMark.cmark_version() == 7424
-    @test CMark.cmark_version_string() == "0.29.0"
+    @test CMark.cmark_version() == 1900544
+    @test CMark.cmark_version_string() == "0.29.0.gfm.0"
 
     # simple empty Markdown document
     let md = "" |> CMark.parse_document |> CMark.markdown_withsiblings
@@ -245,6 +245,37 @@ import Markdown
             @test code isa Markdown.Code
             @test code.language == "@raw html"
             @test code.code == "<div>HTML blocks</div>\n"
+        end
+    end
+
+    # GFM extensions
+    let md = """
+        ~foo bar~
+
+        | foo | bar       |
+        | --- | --------- |
+        | baz | *bim* bim |
+        """ |> markdown
+        @test md isa Markdown.MD
+        @test length(md) == 2
+        let p = md[1]
+            @test p isa Markdown.Paragraph
+            @test length(p.content) == 1
+            @test p.content[1] isa Vector
+            @test length(p.content[1]) == 3
+            @test p.content[1][1] isa Markdown.Code
+            @test p.content[1][2] isa String
+            @test p.content[1][3] isa Markdown.Code
+        end
+        let t = md[2]
+            @test t isa Markdown.Table
+            @test length(t.rows) == 2
+            @test length(t.rows[1]) == 2
+            @test length(t.rows[1][1]) == 1
+            @test length(t.rows[1][2]) == 1
+            @test length(t.rows[2]) == 2
+            @test length(t.rows[2][1]) == 1
+            @test length(t.rows[2][2]) == 2
         end
     end
 end

@@ -1,45 +1,92 @@
 module CMark
 import Markdown
+using Libdl
 using Compat
 
-const libcmark = joinpath(@__DIR__, "..", "deps", "libcmark.so")
+const libcmark = joinpath(@__DIR__, "..", "deps", "libcmark-gfm.so")
+const libcmark_ext = joinpath(@__DIR__, "..", "deps", "libcmark-gfm-extensions.so")
+
+const extensions = ["autolink", "strikethrough", "table", "tagfilter", "tasklist"]
 
 const CMARK_OPT_DEFAULT = 0
 
+# Node type enum for libcmark
+# @enum cmark_node_type begin
+#     # Error status
+#     CMARK_NODE_NONE
+#
+#     # Block
+#     CMARK_NODE_DOCUMENT
+#     CMARK_NODE_BLOCK_QUOTE
+#     CMARK_NODE_LIST
+#     CMARK_NODE_ITEM
+#     CMARK_NODE_CODE_BLOCK
+#     CMARK_NODE_HTML_BLOCK
+#     CMARK_NODE_CUSTOM_BLOCK
+#     CMARK_NODE_PARAGRAPH
+#     CMARK_NODE_HEADING
+#     CMARK_NODE_THEMATIC_BREAK
+#
+#     # CMARK_NODE_FIRST_BLOCK = CMARK_NODE_DOCUMENT
+#     # CMARK_NODE_LAST_BLOCK = CMARK_NODE_THEMATIC_BREAK
+#
+#     # Inline
+#     CMARK_NODE_TEXT
+#     CMARK_NODE_SOFTBREAK
+#     CMARK_NODE_LINEBREAK
+#     CMARK_NODE_CODE
+#     CMARK_NODE_HTML_INLINE
+#     CMARK_NODE_CUSTOM_INLINE
+#     CMARK_NODE_EMPH
+#     CMARK_NODE_STRONG
+#     CMARK_NODE_LINK
+#     CMARK_NODE_IMAGE
+#
+#     # CMARK_NODE_FIRST_INLINE = CMARK_NODE_TEXT
+#     # CMARK_NODE_LAST_INLINE = CMARK_NODE_IMAGE
+# end
+
+# src/cmark-gfm.h:34:#define CMARK_NODE_TYPE_PRESENT (0x8000)
+const CMARK_NODE_TYPE_PRESENT = 0x8000
+# src/cmark-gfm.h:35:#define CMARK_NODE_TYPE_BLOCK (CMARK_NODE_TYPE_PRESENT | 0x0000)
+const CMARK_NODE_TYPE_BLOCK = (CMARK_NODE_TYPE_PRESENT | 0x0000)
+# src/cmark-gfm.h:36:#define CMARK_NODE_TYPE_INLINE (CMARK_NODE_TYPE_PRESENT | 0x4000)
+const CMARK_NODE_TYPE_INLINE  = (CMARK_NODE_TYPE_PRESENT | 0x4000)
+
 @enum cmark_node_type begin
     # Error status
-    CMARK_NODE_NONE
+    CMARK_NODE_NONE = 0x0000
 
     # Block
-    CMARK_NODE_DOCUMENT
-    CMARK_NODE_BLOCK_QUOTE
-    CMARK_NODE_LIST
-    CMARK_NODE_ITEM
-    CMARK_NODE_CODE_BLOCK
-    CMARK_NODE_HTML_BLOCK
-    CMARK_NODE_CUSTOM_BLOCK
-    CMARK_NODE_PARAGRAPH
-    CMARK_NODE_HEADING
-    CMARK_NODE_THEMATIC_BREAK
-
-    # CMARK_NODE_FIRST_BLOCK = CMARK_NODE_DOCUMENT
-    # CMARK_NODE_LAST_BLOCK = CMARK_NODE_THEMATIC_BREAK
+    CMARK_NODE_DOCUMENT       = CMARK_NODE_TYPE_BLOCK | 0x0001
+    CMARK_NODE_BLOCK_QUOTE    = CMARK_NODE_TYPE_BLOCK | 0x0002
+    CMARK_NODE_LIST           = CMARK_NODE_TYPE_BLOCK | 0x0003
+    CMARK_NODE_ITEM           = CMARK_NODE_TYPE_BLOCK | 0x0004
+    CMARK_NODE_CODE_BLOCK     = CMARK_NODE_TYPE_BLOCK | 0x0005
+    CMARK_NODE_HTML_BLOCK     = CMARK_NODE_TYPE_BLOCK | 0x0006
+    CMARK_NODE_CUSTOM_BLOCK   = CMARK_NODE_TYPE_BLOCK | 0x0007
+    CMARK_NODE_PARAGRAPH      = CMARK_NODE_TYPE_BLOCK | 0x0008
+    CMARK_NODE_HEADING        = CMARK_NODE_TYPE_BLOCK | 0x0009
+    CMARK_NODE_THEMATIC_BREAK = CMARK_NODE_TYPE_BLOCK | 0x000a
+    CMARK_NODE_FOOTNOTE_DEFINITION = CMARK_NODE_TYPE_BLOCK | 0x000b
 
     # Inline
-    CMARK_NODE_TEXT
-    CMARK_NODE_SOFTBREAK
-    CMARK_NODE_LINEBREAK
-    CMARK_NODE_CODE
-    CMARK_NODE_HTML_INLINE
-    CMARK_NODE_CUSTOM_INLINE
-    CMARK_NODE_EMPH
-    CMARK_NODE_STRONG
-    CMARK_NODE_LINK
-    CMARK_NODE_IMAGE
-
-    # CMARK_NODE_FIRST_INLINE = CMARK_NODE_TEXT
-    # CMARK_NODE_LAST_INLINE = CMARK_NODE_IMAGE
+    CMARK_NODE_TEXT          = CMARK_NODE_TYPE_INLINE | 0x0001
+    CMARK_NODE_SOFTBREAK     = CMARK_NODE_TYPE_INLINE | 0x0002
+    CMARK_NODE_LINEBREAK     = CMARK_NODE_TYPE_INLINE | 0x0003
+    CMARK_NODE_CODE          = CMARK_NODE_TYPE_INLINE | 0x0004
+    CMARK_NODE_HTML_INLINE   = CMARK_NODE_TYPE_INLINE | 0x0005
+    CMARK_NODE_CUSTOM_INLINE = CMARK_NODE_TYPE_INLINE | 0x0006
+    CMARK_NODE_EMPH          = CMARK_NODE_TYPE_INLINE | 0x0007
+    CMARK_NODE_STRONG        = CMARK_NODE_TYPE_INLINE | 0x0008
+    CMARK_NODE_LINK          = CMARK_NODE_TYPE_INLINE | 0x0009
+    CMARK_NODE_IMAGE         = CMARK_NODE_TYPE_INLINE | 0x000a
+    CMARK_NODE_FOOTNOTE_REFERENCE = CMARK_NODE_TYPE_INLINE | 0x000b
 end
+const CMARK_NODE_STRIKETHROUGH = Ref{Int32}(-1)
+const CMARK_NODE_TABLE         = Ref{Int32}(-1)
+const CMARK_NODE_TABLE_ROW     = Ref{Int32}(-1)
+const CMARK_NODE_TABLE_CELL    = Ref{Int32}(-1)
 
 @enum cmark_list_type begin
     CMARK_NO_LIST
@@ -82,7 +129,7 @@ function cmark_parse_document(markdown::AbstractString)
 end
 
 """
-    cmark_node_get_type(node::Ptr{Cvoid}) -> node_type::Cuint
+    cmark_node_get_type(node::Ptr{Cvoid}) -> node_type::Cint
 
 Wraps `cmark_node_get_type` from `libcmark`:
 
@@ -93,7 +140,7 @@ Wraps `cmark_node_get_type` from `libcmark`:
 function cmark_node_get_type(node::Ptr{Cvoid})
     t = ccall(
         (:cmark_node_get_type, libcmark),
-        Cuint, (Ptr{Cvoid},),
+        Cint, (Ptr{Cvoid},),
         node
     )
 end
@@ -237,16 +284,130 @@ function cmark_node_get_title(node::Ptr{Cvoid})
    )
 end
 
+"""''
+> cmark_syntax_extension *cmark_find_syntax_extension(const char *name);
+"""
+function cmark_find_syntax_extension(name::AbstractString)
+    ccall(
+        (:cmark_find_syntax_extension, libcmark),
+        Ptr{Cvoid}, (Cstring,),
+        name
+    )
+end
+
+"""
+cmark_parser * cmark_parser_new(int options)
+
+Creates a new parser object.
+"""
+function cmark_parser_new()
+    ccall(
+        (:cmark_parser_new, libcmark),
+        Ptr{Cvoid}, (Cint,),
+        CMARK_OPT_DEFAULT
+    )
+end
+
+"""
+void cmark_parser_free(cmark_parser *parser)
+
+Frees memory allocated for a parser object.
+"""
+function cmark_parser_free(p::Ptr{Cvoid})
+    ccall(
+        (:cmark_parser_free, libcmark),
+        Cvoid, (Ptr{Cvoid},),
+        p
+    )
+end
+
+"""
+void cmark_parser_feed(cmark_parser *parser, const char *buffer, size_t len)
+
+Feeds a string of length len to parser.
+"""
+function cmark_parser_feed(p::Ptr{Cvoid}, s::AbstractString)
+    ccall(
+        (:cmark_parser_feed, libcmark),
+        Cvoid, (Ptr{Cvoid}, Cstring, Csize_t),
+        p, s, length(s)
+    )
+end
+
+"""
+cmark_node * cmark_parser_finish(cmark_parser *parser)
+
+Finish parsing and return a pointer to a tree of nodes.
+"""
+function cmark_parser_finish(p::Ptr{Cvoid})
+    ccall(
+        (:cmark_parser_finish, libcmark),
+        Ptr{Cvoid}, (Ptr{Cvoid},),
+        p
+    )
+end
+
+# int cmark_parser_attach_syntax_extension(cmark_parser *parser, cmark_syntax_extension *extension);
+function cmark_parser_attach_syntax_extension(p::Ptr{Cvoid}, ext::Ptr{Cvoid})
+    ccall(
+        (:cmark_parser_attach_syntax_extension, libcmark),
+        Cint, (Ptr{Cvoid}, Ptr{Cvoid}),
+        p, ext
+    )
+end
+
+# Extensions
+#void cmark_gfm_core_extensions_ensure_registered(void);
+function cmark_gfm_core_extensions_ensure_registered()
+    ccall((:cmark_gfm_core_extensions_ensure_registered, libcmark_ext), Cvoid, ())
+end
 
 # Public Julia API
 struct CMarkNode
     p :: Ptr{Cvoid}
 end
 
+struct CMarkSyntaxExtension
+    p :: Ptr{Cvoid}
+end
+
+#"autolink", "strikethrough", "table", "tagfilter"
+function findsyntaxextension(name)
+    p = cmark_find_syntax_extension(name)
+    p == C_NULL ? nothing : CMarkSyntaxExtension(p)
+end
+
 parse_document(markdown::AbstractString) = CMarkNode(cmark_parse_document(markdown))
 
-function nodetype(node::CMarkNode)
-    cmark_node_type(cmark_node_get_type(node.p))
+function parse_document_gfm(markdown::AbstractString)
+    p = cmark_parser_new()
+    for e in extensions
+        ext_p = cmark_find_syntax_extension(e)
+        cmark_parser_attach_syntax_extension(p, ext_p)
+    end
+    cmark_parser_feed(p, markdown)
+    n = cmark_parser_finish(p)
+    cmark_parser_free(p)
+    CMarkNode(n)
+end
+
+function nodetype(node::CMarkNode) :: Union{cmark_node_type,Symbol,Missing}
+    t_int = cmark_node_get_type(node.p)
+    if t_int == CMARK_NODE_STRIKETHROUGH[]
+        return :CMARK_NODE_STRIKETHROUGH
+    elseif t_int == CMARK_NODE_TABLE[]
+        return :CMARK_NODE_TABLE
+    elseif t_int == CMARK_NODE_TABLE_CELL[]
+        return :CMARK_NODE_TABLE_CELL
+    elseif t_int == CMARK_NODE_TABLE_ROW[]
+        return :CMARK_NODE_TABLE_ROW
+    end
+    try
+        t = cmark_node_type(t_int)
+        return t
+    catch e
+        isa(e, ArgumentError) ? missing : rethrow(e)
+    end
 end
 
 function listtype(node::CMarkNode)
@@ -355,12 +516,30 @@ function markdown(node::CMarkNode)
         # TODO: we will also discard the alt text, since Julia only supports string, but
         # CommonMark allows for arbitrary formatting.
         Markdown.Image(url, "")
+
+    # Extension nodes
+    elseif ntype == :CMARK_NODE_STRIKETHROUGH
+        # TODO: we end up with a vector in a vector here
+        [
+            Markdown.Code("@raw html", "<del>"),
+            markdown_withsiblings(first(node))...,
+            Markdown.Code("@raw html", "</del>")
+        ]
+    elseif ntype == :CMARK_NODE_TABLE
+        # TODO: alignment
+        rows = markdown_withsiblings(first(node))
+        ncols = maximum(length.(rows))
+        Markdown.Table(rows, [:l for _ in 1:ncols])
+    elseif ntype == :CMARK_NODE_TABLE_ROW
+        markdown_withsiblings(first(node))
+    elseif ntype == :CMARK_NODE_TABLE_CELL
+        markdown_withsiblings(first(node))
     else
         error("Node type $(ntype) not implemented")
     end
 end
 
-markdown(s::AbstractString) = markdown(parse_document(s))
+markdown(s::AbstractString) = markdown(parse_document_gfm(s))
 
 function typetree(node::CMarkNode; level=0)
     n = node
@@ -378,5 +557,25 @@ function typetree(node::CMarkNode; level=0)
 end
 
 export markdown
+
+function __init__()
+    #libcmark_h = Libdl.dlopen(libcmark)
+    #libcmark_ext_h = Libdl.dlopen(libcmark_ext)
+    cmark_version_string() # we need to call something from the main library
+    #@show dlsym(libcmark_ext_h, :cmark_gfm_core_extensions_ensure_registered);
+    #@show CMark.findsyntaxextension.(["autolink", "strikethrough", "table", "tagfilter"])
+    #@info "Calling: cmark_gfm_core_extensions_ensure_registered"
+    #sleep(1)
+    cmark_gfm_core_extensions_ensure_registered()
+    exts = findsyntaxextension.(extensions)
+    any(exts .== C_NULL) && error("Failed to load GFM extensions, $exts")
+
+    # Fetch the GFM node type values
+    libcmark_ext_h = Libdl.dlopen(libcmark_ext)
+    CMARK_NODE_STRIKETHROUGH[] = unsafe_load(Ptr{Cint}(dlsym(libcmark_ext_h, :CMARK_NODE_STRIKETHROUGH)))
+    CMARK_NODE_TABLE[] = unsafe_load(Ptr{Cint}(dlsym(libcmark_ext_h, :CMARK_NODE_TABLE)))
+    CMARK_NODE_TABLE_ROW[] = unsafe_load(Ptr{Cint}(dlsym(libcmark_ext_h, :CMARK_NODE_TABLE_ROW)))
+    CMARK_NODE_TABLE_CELL[] = unsafe_load(Ptr{Cint}(dlsym(libcmark_ext_h, :CMARK_NODE_TABLE_CELL)))
+end
 
 end # module

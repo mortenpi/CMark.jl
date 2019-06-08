@@ -2,3 +2,8 @@ build.log
 0.29.0.tar.gz
 cmark-0.29.0/
 libcmark.so
+
+0.29.0.gfm.0.tar.gz
+cmark-gfm-0.29.0.gfm.0/
+libcmark-gfm.so
+libcmark-gfm-extensions.so
