@@ -4,8 +4,8 @@ import Markdown
 
 @testset "CMark.jl" begin
     # Write your own tests here.
-    @test CMark.cmark_version() == 1900544
-    @test CMark.cmark_version_string() == "0.29.0.gfm.0"
+    @test CMark.cmark_version() == 1900547
+    @test CMark.cmark_version_string() == "0.29.0.gfm.3"
 
     # simple empty Markdown document
     let md = "" |> CMark.parse_document |> CMark.markdown_withsiblings

@@ -3,8 +3,9 @@ import Markdown
 using Libdl
 using Compat
 
-const libcmark = joinpath(@__DIR__, "..", "deps", "libcmark-gfm.so")
-const libcmark_ext = joinpath(@__DIR__, "..", "deps", "libcmark-gfm-extensions.so")
+using cmark_gfm_jll
+const libcmark = libcmark_gfm
+const libcmark_ext = replace(libcmark_gfm, "libcmark-gfm" => "libcmark-gfm-extensions")
 
 const extensions = ["autolink", "strikethrough", "table", "tagfilter", "tasklist"]
 
