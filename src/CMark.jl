@@ -101,27 +101,27 @@ end
 # CMARK_PAREN_DELIM
 # } cmark_delim_type;
 
-@cmarkapi function cmark_version(::CMarkLibrary{PATH}) where PATH
-    ccall((:cmark_version, PATH), Cint, ()) |> Int
+@cmarkapi function cmark_version(::CMarkLibrary{LIBCM,LIBCMX}) where {LIBCM, LIBCMX}
+    ccall((:cmark_version, LIBCM), Cint, ()) |> Int
 end
 
-@cmarkapi function cmark_version_string(::CMarkLibrary{PATH}) where PATH
-    s = ccall((:cmark_version_string, PATH), Cstring, ())
+@cmarkapi function cmark_version_string(::CMarkLibrary{LIBCM,LIBCMX}) where {LIBCM, LIBCMX}
+    s = ccall((:cmark_version_string, LIBCM), Cstring, ())
     unsafe_string(s)
 end
 
-@cmarkapi function cmark_markdown_to_html(::CMarkLibrary{PATH}, markdown::AbstractString) where PATH
+@cmarkapi function cmark_markdown_to_html(::CMarkLibrary{LIBCM,LIBCMX}, markdown::AbstractString) where {LIBCM, LIBCMX}
     s = ccall(
-        (:cmark_markdown_to_html, PATH),
+        (:cmark_markdown_to_html, LIBCM),
         Cstring, (Cstring, Csize_t, Cint),
         markdown, length(markdown), CMARK_OPT_DEFAULT
     )
     unsafe_string(s)
 end
 
-@cmarkapi function cmark_parse_document(::CMarkLibrary{PATH}, markdown::AbstractString) where PATH
+@cmarkapi function cmark_parse_document(::CMarkLibrary{LIBCM,LIBCMX}, markdown::AbstractString) where {LIBCM, LIBCMX}
     ccall(
-        (:cmark_parse_document, PATH),
+        (:cmark_parse_document, LIBCM),
         Ptr{Cvoid}, (Cstring, Csize_t, Cint),
         markdown, length(markdown), CMARK_OPT_DEFAULT
     )
@@ -137,9 +137,9 @@ Wraps `cmark_node_get_type` from `libcmark`:
 > Returns the type of node, or `CMARK_NODE_NONE` on error.
 """
 function cmark_node_get_type end
-@cmarkapi function cmark_node_get_type(::CMarkLibrary{PATH}, node::Ptr{Cvoid}) where PATH
+@cmarkapi function cmark_node_get_type(::CMarkLibrary{LIBCM,LIBCMX}, node::Ptr{Cvoid}) where {LIBCM, LIBCMX}
     t = ccall(
-        (:cmark_node_get_type, PATH),
+        (:cmark_node_get_type, LIBCM),
         Cint, (Ptr{Cvoid},),
         node
     )
@@ -155,9 +155,9 @@ Wraps `cmark_node_next` from `libcmark`:
 > Returns the next node in the sequence after `node`, or `NULL` if there is none.
 """
 function cmark_node_next end
-@cmarkapi function cmark_node_next(::CMarkLibrary{PATH}, node::Ptr{Cvoid}) where PATH
+@cmarkapi function cmark_node_next(::CMarkLibrary{LIBCM,LIBCMX}, node::Ptr{Cvoid}) where {LIBCM, LIBCMX}
     ccall(
-        (:cmark_node_next, PATH),
+        (:cmark_node_next, LIBCM),
         Ptr{Cvoid}, (Ptr{Cvoid},),
         node
     )
@@ -173,9 +173,9 @@ Wraps `cmark_node_first_child` from `libcmark`:
 > Returns the first child of `node`, or `NULL` if `node` has no children.
 """
 function cmark_node_first_child end
-@cmarkapi function cmark_node_first_child(::CMarkLibrary{PATH}, node::Ptr{Cvoid}) where PATH
+@cmarkapi function cmark_node_first_child(::CMarkLibrary{LIBCM,LIBCMX}, node::Ptr{Cvoid}) where {LIBCM, LIBCMX}
     ccall(
-        (:cmark_node_first_child, PATH),
+        (:cmark_node_first_child, LIBCM),
         Ptr{Cvoid}, (Ptr{Cvoid},),
         node
     )
@@ -192,9 +192,9 @@ Wraps `cmark_node_get_literal` from `libcmark`:
 > called on a node that does not have string content.
 """
 function cmark_node_get_literal end
-@cmarkapi function cmark_node_get_literal(::CMarkLibrary{PATH}, node::Ptr{Cvoid}) where PATH
+@cmarkapi function cmark_node_get_literal(::CMarkLibrary{LIBCM,LIBCMX}, node::Ptr{Cvoid}) where {LIBCM, LIBCMX}
     ccall(
-        (:cmark_node_get_literal, PATH),
+        (:cmark_node_get_literal, LIBCM),
         Cstring, (Ptr{Cvoid},),
         node
     )
@@ -210,9 +210,9 @@ Wraps `cmark_node_get_heading_level` from `libcmark`:
 > Returns the heading level of `node`, or `0` if `node` is not a heading.
 """
 function cmark_node_get_heading_level end
-@cmarkapi function cmark_node_get_heading_level(::CMarkLibrary{PATH}, node::Ptr{Cvoid}) where PATH
+@cmarkapi function cmark_node_get_heading_level(::CMarkLibrary{LIBCM,LIBCMX}, node::Ptr{Cvoid}) where {LIBCM, LIBCMX}
    ccall(
-       (:cmark_node_get_heading_level, PATH),
+       (:cmark_node_get_heading_level, LIBCM),
        Cint, (Ptr{Cvoid},),
        node
    )
@@ -228,9 +228,9 @@ Wraps `cmark_node_get_fence_info` from `libcmark`:
 > Returns the info string from a fenced code block.
 """
 function cmark_node_get_fence_info end
-@cmarkapi function cmark_node_get_fence_info(::CMarkLibrary{PATH}, node::Ptr{Cvoid}) where PATH
+@cmarkapi function cmark_node_get_fence_info(::CMarkLibrary{LIBCM,LIBCMX}, node::Ptr{Cvoid}) where {LIBCM, LIBCMX}
    ccall(
-       (:cmark_node_get_fence_info, PATH),
+       (:cmark_node_get_fence_info, LIBCM),
        Cstring, (Ptr{Cvoid},),
        node
    )
@@ -246,9 +246,9 @@ Wraps `cmark_node_get_list_type` from `libcmark`:
 > Returns the list type of `node`, or `CMARK_NO_LIST` if `node` is not a list.
 """
 function cmark_node_get_list_type end
-@cmarkapi function cmark_node_get_list_type(::CMarkLibrary{PATH}, node::Ptr{Cvoid}) where PATH
+@cmarkapi function cmark_node_get_list_type(::CMarkLibrary{LIBCM,LIBCMX}, node::Ptr{Cvoid}) where {LIBCM, LIBCMX}
    ccall(
-       (:cmark_node_get_list_type, PATH),
+       (:cmark_node_get_list_type, LIBCM),
        Cuint, (Ptr{Cvoid},),
        node
    )
@@ -265,9 +265,9 @@ Wraps `cmark_node_get_url` from `libcmark`:
 > `NULL` if called on a node that is not a link or image.
 """
 function cmark_node_get_url end
-@cmarkapi function cmark_node_get_url(::CMarkLibrary{PATH}, node::Ptr{Cvoid}) where PATH
+@cmarkapi function cmark_node_get_url(::CMarkLibrary{LIBCM,LIBCMX}, node::Ptr{Cvoid}) where {LIBCM, LIBCMX}
    ccall(
-       (:cmark_node_get_url, PATH),
+       (:cmark_node_get_url, LIBCM),
        Cstring, (Ptr{Cvoid},),
        node
    )
@@ -284,9 +284,9 @@ Wraps `cmark_node_get_title` from `libcmark`:
 > `NULL` if called on a node that is not a link or image.
 """
 function cmark_node_get_title end
-@cmarkapi function cmark_node_get_title(::CMarkLibrary{PATH}, node::Ptr{Cvoid}) where PATH
+@cmarkapi function cmark_node_get_title(::CMarkLibrary{LIBCM,LIBCMX}, node::Ptr{Cvoid}) where {LIBCM, LIBCMX}
    ccall(
-       (:cmark_node_get_title, PATH),
+       (:cmark_node_get_title, LIBCM),
        Cstring, (Ptr{Cvoid},),
        node
    )
@@ -296,9 +296,9 @@ end
 > cmark_syntax_extension *cmark_find_syntax_extension(const char *name);
 """
 function cmark_find_syntax_extension end
-@cmarkapi function cmark_find_syntax_extension(::CMarkLibrary{PATH}, name::AbstractString) where PATH
+@cmarkapi function cmark_find_syntax_extension(::CMarkLibrary{LIBCM,LIBCMX}, name::AbstractString) where {LIBCM, LIBCMX}
     ccall(
-        (:cmark_find_syntax_extension, PATH),
+        (:cmark_find_syntax_extension, LIBCM),
         Ptr{Cvoid}, (Cstring,),
         name
     )
@@ -310,9 +310,9 @@ cmark_parser * cmark_parser_new(int options)
 Creates a new parser object.
 """
 function cmark_parser_new end
-@cmarkapi function cmark_parser_new(::CMarkLibrary{PATH}) where PATH
+@cmarkapi function cmark_parser_new(::CMarkLibrary{LIBCM,LIBCMX}) where {LIBCM, LIBCMX}
     ccall(
-        (:cmark_parser_new, PATH),
+        (:cmark_parser_new, LIBCM),
         Ptr{Cvoid}, (Cint,),
         CMARK_OPT_DEFAULT
     )
@@ -324,9 +324,9 @@ void cmark_parser_free(cmark_parser *parser)
 Frees memory allocated for a parser object.
 """
 function cmark_parser_free end
-@cmarkapi function cmark_parser_free(::CMarkLibrary{PATH}, p::Ptr{Cvoid}) where PATH
+@cmarkapi function cmark_parser_free(::CMarkLibrary{LIBCM,LIBCMX}, p::Ptr{Cvoid}) where {LIBCM, LIBCMX}
     ccall(
-        (:cmark_parser_free, PATH),
+        (:cmark_parser_free, LIBCM),
         Cvoid, (Ptr{Cvoid},),
         p
     )
@@ -338,9 +338,9 @@ void cmark_parser_feed(cmark_parser *parser, const char *buffer, size_t len)
 Feeds a string of length len to parser.
 """
 function cmark_parser_feed end
-@cmarkapi function cmark_parser_feed(::CMarkLibrary{PATH}, p::Ptr{Cvoid}, s::AbstractString) where PATH
+@cmarkapi function cmark_parser_feed(::CMarkLibrary{LIBCM,LIBCMX}, p::Ptr{Cvoid}, s::AbstractString) where {LIBCM, LIBCMX}
     ccall(
-        (:cmark_parser_feed, PATH),
+        (:cmark_parser_feed, LIBCM),
         Cvoid, (Ptr{Cvoid}, Cstring, Csize_t),
         p, s, length(s)
     )
@@ -352,18 +352,18 @@ cmark_node * cmark_parser_finish(cmark_parser *parser)
 Finish parsing and return a pointer to a tree of nodes.
 """
 function cmark_parser_finish end
-@cmarkapi function cmark_parser_finish(::CMarkLibrary{PATH}, p::Ptr{Cvoid}) where PATH
+@cmarkapi function cmark_parser_finish(::CMarkLibrary{LIBCM,LIBCMX}, p::Ptr{Cvoid}) where {LIBCM, LIBCMX}
     ccall(
-        (:cmark_parser_finish, PATH),
+        (:cmark_parser_finish, LIBCM),
         Ptr{Cvoid}, (Ptr{Cvoid},),
         p
     )
 end
 
 # int cmark_parser_attach_syntax_extension(cmark_parser *parser, cmark_syntax_extension *extension);
-@cmarkapi function cmark_parser_attach_syntax_extension(::CMarkLibrary{PATH}, p::Ptr{Cvoid}, ext::Ptr{Cvoid}) where PATH
+@cmarkapi function cmark_parser_attach_syntax_extension(::CMarkLibrary{LIBCM,LIBCMX}, p::Ptr{Cvoid}, ext::Ptr{Cvoid}) where {LIBCM, LIBCMX}
     ccall(
-        (:cmark_parser_attach_syntax_extension, PATH),
+        (:cmark_parser_attach_syntax_extension, LIBCM),
         Cint, (Ptr{Cvoid}, Ptr{Cvoid}),
         p, ext
     )
@@ -371,8 +371,8 @@ end
 
 # Extensions
 #void cmark_gfm_core_extensions_ensure_registered(void);
-@cmarkapi function cmark_gfm_core_extensions_ensure_registered(::CMarkLibrary{PATH}) where PATH
-    ccall((:cmark_gfm_core_extensions_ensure_registered, PATH), Cvoid, ())
+@cmarkapi function cmark_gfm_core_extensions_ensure_registered(::CMarkLibrary{LIBCM,LIBCMX}) where {LIBCM, LIBCMX}
+    ccall((:cmark_gfm_core_extensions_ensure_registered, LIBCMX), Cvoid, ())
 end
 
 # Public Julia API

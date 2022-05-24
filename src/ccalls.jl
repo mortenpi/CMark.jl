@@ -5,25 +5,42 @@
 # libcmarkgfm.
 
 """
-    struct CMarkLibrary{PATH}
+    struct CMarkLibrary{LIBCM,LIBCMX}
 
 Can be used to pass different `cmark` or `cmark-gfm` shared library products to the C calls.
 
-It stores the full string of the path to the shared library as the type parameter `PATH`, so
-that we could use the `ccall((:foo, PATH), ...)` syntax semi-dynamically, while still making
-sure that the `PATH` is a compile-time constant and therefore that `ccall` is valid.
-"""
-struct CMarkLibrary{PATH} end
-CMarkLibrary(path) = CMarkLibrary{Symbol(path)}()
+It stores the full string paths to the shared libraries as type parameters. This way it is
+possible to use the `ccall((:foo, LIBCM), ...)` syntax semi-dynamically, while still making
+sure that the `LIBCM` is a compile-time constant and therefore that `ccall` is valid.
 
-function init!(::CMarkLibrary{PATH}) where PATH
-    cmark_gfm_core_extensions_ensure_registered()
+`LIBCM` is the path to the `libcmark` library, whereas the `LIBCMX` is the path to the
+`libcmark-extensions` library, which can optionally be `nothing`, in which case extensions
+are not allowed.
+"""
+struct CMarkLibrary{LIBCM,LIBCMX} end
+function CMarkLibrary(libcmark::AbstractString, libcmark_extensions::Union{AbstractString,Nothing} = nothing)
+    isfile(libcmark) || error("Invalid libcmark path: $(libcmark)")
+    libcm = Symbol(libcmark)
+    libcmx = if isnothing(libcmark_extensions)
+        nothing
+    else
+        isfile(libcmark_extensions) || error("Invalid libcmark_extensions path: $(libcmark_extensions)")
+        Symbol(libcmark_extensions)
+    end
+    CMarkLibrary{libcm,libcmx}()
+end
+
+function init!(libcmark::CMarkLibrary{LIBCM,LIBCMX}) where {LIBCM, LIBCMX}
+    # If the extension shared library is not provided, we assume that there are no extensions.
+    isnothing(LIBCMX) && return
+
+    cmark_gfm_core_extensions_ensure_registered(libcmark)
     exts = findsyntaxextension.(extensions)
     any(exts .== C_NULL) && error("Failed to load GFM extensions, $exts")
 
     # Not entirely sure about the RTLD_* options here, but I am borrowing them from the JLL
     # library.
-    h = Libdl.dlopen(PATH, RTLD_LAZY | RTLD_DEEPBIND)
+    h = Libdl.dlopen(LIBCMX, RTLD_LAZY | RTLD_DEEPBIND)
     CMARK_NODE_STRIKETHROUGH[] = unsafe_load(Ptr{Cint}(dlsym(h, :CMARK_NODE_STRIKETHROUGH)))
     CMARK_NODE_TABLE[] = unsafe_load(Ptr{Cint}(dlsym(h, :CMARK_NODE_TABLE)))
     CMARK_NODE_TABLE_ROW[] = unsafe_load(Ptr{Cint}(dlsym(h, :CMARK_NODE_TABLE_ROW)))
@@ -36,7 +53,10 @@ end
 Default [`CMarkLibrary`](@ref) instance, pointing to the cmark-gfm library JLL that is a
 binary dependency of this package.
 """
-const libcmarkgfm = CMarkLibrary(cmark_gfm_jll.libcmark_gfm_extensions)
+const libcmarkgfm = CMarkLibrary(
+    cmark_gfm_jll.libcmark_gfm,
+    cmark_gfm_jll.libcmark_gfm_extensions,
+)
 
 """
     @cmarkapi <cmark ccall wrapper definition>
@@ -47,7 +67,7 @@ default shared library ([`libcmarkgfm`](@ref)).
 The functions are expected to be defined with the signature
 
 ```julia
-function cmark_fn(::CMarkLibrary{PATH}, args...; kwargs...) where PATH
+function cmark_fn(::CMarkLibrary{LIBCM, LIBCMX}, args...; kwargs...) where {LIBCM, LIBCMX}
     ...
 end
 ```
@@ -62,7 +82,7 @@ cmark_fn(args...; kwargs...) = cmark_fn(libcmarkgfm, args...; kwargs...)
 macro cmarkapi(expr)
     # The expression should be a function definition that looks something like
     #
-    #   function cmark_fn(::CMarkLibrary{PATH}, args...) where PATH ... end
+    #   function cmark_fn(::CMarkLibrary{LIBCM, LIBCMX}, args...) where {LIBCM, LIBCMX} ... end
     #
     # This leads to the AST that looks something like:
     #
@@ -70,7 +90,7 @@ macro cmarkapi(expr)
     #     (:where, [
     #         (:call, [
     #             :cmark_fn,
-    #             ::CMarkLibrary{PATH},
+    #             ::CMarkLibrary{LIBCM, LIBCMX},
     #             args...
     #         ]),
     #         :PATH
