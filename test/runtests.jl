@@ -1,6 +1,7 @@
 using CMark
 using Test
 import Markdown
+using cmark_jll: cmark_jll
 
 @testset "CMark.jl" begin
     # Write your own tests here.
@@ -277,5 +278,11 @@ import Markdown
             @test length(t.rows[2][1]) == 1
             @test length(t.rows[2][2]) == 2
         end
+    end
+
+    @testset "Custom CMarkLibrary" begin
+        libcmark = CMark.CMarkLibrary(cmark_jll.libcmark)
+        @test CMark.cmark_version(libcmark) == 7682
+        @test CMark.cmark_version_string(libcmark) == "0.30.2"
     end
 end

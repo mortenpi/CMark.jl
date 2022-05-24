@@ -12,10 +12,12 @@ cmark_gfm_jll = "a3df0bfa-898a-51af-9696-aaeb342b5108"
 [compat]
 Compat = "3"
 julia = "1.6"
-cmark_gfm_jll = "0.29"
+cmark_gfm_jll = "0.29.0"
+cmark_jll = "0.30.2"
 
 [extras]
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+cmark_jll = "7ecd0961-8137-5994-b1c6-01b84f60da24"
 
 [targets]
-test = ["Test"]
+test = ["Test", "cmark_jll"]
