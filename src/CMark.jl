@@ -93,32 +93,65 @@ const CMARK_NODE_TABLE_CELL    = Ref{Int32}(-1)
     CMARK_BULLET_LIST
     CMARK_ORDERED_LIST
 end
-# } cmark_list_type;
-#
+
 # typedef enum {
 # CMARK_NO_DELIM,
 # CMARK_PERIOD_DELIM,
 # CMARK_PAREN_DELIM
 # } cmark_delim_type;
 
+"""
+    cmark_version([::CMarkLibrary]) -> Int
+
+Returns the version of the libcmark library as an integer (wrapping the `cmark_version`
+function from `libcmark`).
+"""
+function cmark_version end
 @cmarkapi function cmark_version(::CMarkLibrary{LIBCM,LIBCMX}) where {LIBCM, LIBCMX}
-    ccall((:cmark_version, LIBCM), Cint, ()) |> Int
+    version = ccall((:cmark_version, LIBCM), Cint, ())
+    return Int(version)
 end
 
+"""
+    cmark_version_string([::CMarkLibrary]) -> String
+
+Returns the version of the libcmark library as a string (wrapping the `cmark_version_string`
+function from `libcmark`).
+"""
+function cmark_version_string end
 @cmarkapi function cmark_version_string(::CMarkLibrary{LIBCM,LIBCMX}) where {LIBCM, LIBCMX}
     s = ccall((:cmark_version_string, LIBCM), Cstring, ())
-    unsafe_string(s)
+    return unsafe_string(s)
 end
 
+"""
+    cmark_markdown_to_html([::CMarkLibrary{LIBCM,LIBCMX},] markdown::AbstractString) -> String
+
+Wraps the `cmark_markdown_to_html` function from `libcmark`.
+"""
+function cmark_markdown_to_html end
 @cmarkapi function cmark_markdown_to_html(::CMarkLibrary{LIBCM,LIBCMX}, markdown::AbstractString) where {LIBCM, LIBCMX}
     s = ccall(
         (:cmark_markdown_to_html, LIBCM),
         Cstring, (Cstring, Csize_t, Cint),
         markdown, length(markdown), CMARK_OPT_DEFAULT
     )
-    unsafe_string(s)
+    return unsafe_string(s)
 end
 
+"""
+    cmark_parse_document([::CMarkLibrary{LIBCM,LIBCMX},] markdown::AbstractString) -> Ptr{Cvoid}
+
+Wraps the `cmark_parse_document` function from `libcmark`:
+
+> `cmark_node *cmark_parse_document(const char *buffer, size_t len, int options)`
+>
+> Parse a CommonMark document in 'buffer' of length 'len'.
+> Returns a pointer to a tree of nodes.  The memory allocated for
+> the node tree should be released using 'cmark_node_free'
+> when it is no longer needed.
+"""
+function cmark_parse_document end
 @cmarkapi function cmark_parse_document(::CMarkLibrary{LIBCM,LIBCMX}, markdown::AbstractString) where {LIBCM, LIBCMX}
     ccall(
         (:cmark_parse_document, LIBCM),
@@ -128,7 +161,7 @@ end
 end
 
 """
-    cmark_node_get_type(node::Ptr{Cvoid}) -> node_type::Cint
+    cmark_node_get_type([::CMarkLibrary,] node::Ptr{Cvoid}) -> node_type::Cint
 
 Wraps `cmark_node_get_type` from `libcmark`:
 
@@ -146,7 +179,7 @@ function cmark_node_get_type end
 end
 
 """
-    cmark_node_next(node::Ptr{Cvoid}) -> node::Ptr{Cvoid}
+    cmark_node_next([::CMarkLibrary,] node::Ptr{Cvoid}) -> node::Ptr{Cvoid}
 
 Wraps `cmark_node_next` from `libcmark`:
 
@@ -164,7 +197,7 @@ function cmark_node_next end
 end
 
 """
-    cmark_node_first_child(node::Ptr{Cvoid}) -> node::Ptr{Cvoid}
+    cmark_node_first_child([::CMarkLibrary,] node::Ptr{Cvoid}) -> node::Ptr{Cvoid}
 
 Wraps `cmark_node_first_child` from `libcmark`:
 
@@ -182,7 +215,7 @@ function cmark_node_first_child end
 end
 
 """
-    cmark_node_get_literal(node::Ptr{Cvoid}) -> s::Cstring
+    cmark_node_get_literal([::CMarkLibrary,] node::Ptr{Cvoid}) -> s::Cstring
 
 Wraps `cmark_node_get_literal` from `libcmark`:
 
@@ -201,7 +234,7 @@ function cmark_node_get_literal end
 end
 
 """
-   cmark_node_get_heading_level(node::Ptr{Cvoid}) -> level::Cint
+   cmark_node_get_heading_level([::CMarkLibrary,] node::Ptr{Cvoid}) -> level::Cint
 
 Wraps `cmark_node_get_heading_level` from `libcmark`:
 
@@ -219,7 +252,7 @@ function cmark_node_get_heading_level end
 end
 
 """
-   cmark_node_get_fence_info(node::Ptr{Cvoid}) -> Cstring
+   cmark_node_get_fence_info([::CMarkLibrary,] node::Ptr{Cvoid}) -> Cstring
 
 Wraps `cmark_node_get_fence_info` from `libcmark`:
 
@@ -237,7 +270,7 @@ function cmark_node_get_fence_info end
 end
 
 """
-   cmark_node_get_list_type(node::Ptr{Cvoid}) -> cmark_list_type
+   cmark_node_get_list_type([::CMarkLibrary,] node::Ptr{Cvoid}) -> cmark_list_type
 
 Wraps `cmark_node_get_list_type` from `libcmark`:
 
@@ -255,7 +288,7 @@ function cmark_node_get_list_type end
 end
 
 """
-   cmark_node_get_url(node::Ptr{Cvoid}) -> cmark_list_type
+   cmark_node_get_url([::CMarkLibrary,] node::Ptr{Cvoid}) -> cmark_list_type
 
 Wraps `cmark_node_get_url` from `libcmark`:
 
@@ -274,7 +307,7 @@ function cmark_node_get_url end
 end
 
 """
-    cmark_node_get_title(node::Ptr{Cvoid}) -> Cstring
+    cmark_node_get_title([::CMarkLibrary,] node::Ptr{Cvoid}) -> Cstring
 
 Wraps `cmark_node_get_title` from `libcmark`:
 
