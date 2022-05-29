@@ -280,9 +280,5 @@ using cmark_jll: cmark_jll
         end
     end
 
-    @testset "Custom CMarkLibrary" begin
-        libcmark = CMark.CMarkLibrary(cmark_jll.libcmark)
-        @test CMark.cmark_version(libcmark) == 7682
-        @test CMark.cmark_version_string(libcmark) == "0.30.2"
-    end
+    include("libcmark_vanilla.jl")
 end
