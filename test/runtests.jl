@@ -1,6 +1,6 @@
 using CMark
 using Test
-import Markdown
+import MarkdownAST
 using cmark_jll: cmark_jll
 
 @testset "CMark.jl" begin

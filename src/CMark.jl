@@ -1,5 +1,5 @@
 module CMark
-import Markdown
+using MarkdownAST: MarkdownAST
 using Libdl
 using Compat
 using cmark_gfm_jll: cmark_gfm_jll
@@ -69,7 +69,7 @@ function linkinfo(node::CMarkNode)
     )
 end
 
-function Base.first(node::CMarkNode)
+function first_child(node::CMarkNode)
     p = cmark_node_first_child(node.p)
     p == C_NULL ? nothing : CMarkNode(p)
 end
@@ -94,103 +94,114 @@ function code_fence_info(node::CMarkNode)
     s == C_NULL ? nothing : unsafe_string(s)
 end
 
-# Convert to Base Markdown
-function markdown_withsiblings(node::Union{CMarkNode,Nothing})
+# Convert to MarkdownAST
+
+function markdownast_children(node::CMarkNode)
     nodes = Any[]
-    n = node
-    while !isnothing(n)
-        push!(nodes, markdown(n))
-        n = next(n)
+    child = first_child(node)
+    while !isnothing(child)
+        push!(nodes, markdown(child))
+        child = next(child)
     end
     return nodes
 end
 
-function markdown(node::CMarkNode)
+function markdownast(node::CMarkNode)
     ntype = nodetype(node)
-    if ntype == CMARK_NODE_DOCUMENT
-        Markdown.MD(markdown_withsiblings(first(node)))
+    element = if ntype == CMARK_NODE_DOCUMENT
+        MarkdownAST.Document()
+    elseif ntype == CMARK_NODE_PARAGRAPH
+        MarkdownAST.Paragraph()
+    elseif ntype == CMARK_NODE_HEADING
+        MarkdownAST.Heading(heading_level(node))
     elseif ntype == CMARK_NODE_BLOCK_QUOTE
-        Markdown.BlockQuote(markdown_withsiblings(first(node)))
+        MarkdownAST.BlockQuote()
+    elseif ntype == CMARK_NODE_CODE_BLOCK
+        MarkdownAST.CodeBlock(code_fence_info(node), literal(node))
+    elseif ntype == CMARK_NODE_HTML_BLOCK
+         MarkdownAST.HTMLBlock(literal(node))
+    elseif ntype == CMARK_NODE_THEMATIC_BREAK
+        MarkdownAST.ThematicBreak()
     elseif ntype == CMARK_NODE_LIST
-        # TODO: implement cmark_node_get_list_start
-        # TODO: implement cmark_node_get_list_tight
         list_type = listtype(node)
-        items = markdown_withsiblings(first(node))
-        if list_type == CMARK_BULLET_LIST
-            Markdown.List(items)
+        list_type_symbol = if list_type == CMARK_BULLET_LIST
+            :bullet
         elseif list_type == CMARK_ORDERED_LIST
-            Markdown.List(items, 1)
+            :ordered
         else
             error("Bad list type $(list_type)")
         end
+        # TODO: implement cmark_node_get_list_start
+        # TODO: implement cmark_node_get_list_tight
+        MarkdownAST.List(list_type_symbol, true)
     elseif ntype == CMARK_NODE_ITEM
-        markdown_withsiblings(first(node))
-    elseif ntype == CMARK_NODE_CODE_BLOCK
-        Markdown.Code(code_fence_info(node), literal(node))
-    elseif ntype == CMARK_NODE_HTML_BLOCK
-        Markdown.Code("@raw html", literal(node))
+        MarkdownAST.Item()
     # elseif ntype == CMARK_NODE_CUSTOM_BLOCK
-    elseif ntype == CMARK_NODE_PARAGRAPH
-        Markdown.Paragraph(markdown_withsiblings(first(node)))
-    elseif ntype == CMARK_NODE_HEADING
-        level = heading_level(node)
-        Markdown.Header(markdown_withsiblings(first(node)), level)
-    elseif ntype == CMARK_NODE_THEMATIC_BREAK
-        Markdown.HorizontalRule()
-    # # Inline
-    elseif ntype == CMARK_NODE_TEXT
-        literal(node)
-    elseif ntype == CMARK_NODE_SOFTBREAK
-        " "
-    elseif ntype == CMARK_NODE_LINEBREAK
-        # TODO: not really supported by Base Markdown?
-        "\n"
-    elseif ntype == CMARK_NODE_CODE
-        Markdown.Code(literal(node))
-    elseif ntype == CMARK_NODE_HTML_INLINE
-        Markdown.Code("@raw html", literal(node))
-    # elseif ntype == CMARK_NODE_CUSTOM_INLINE
-    elseif ntype == CMARK_NODE_EMPH
-        Markdown.Italic(markdown_withsiblings(first(node)))
-    elseif ntype == CMARK_NODE_STRONG
-        Markdown.Bold(markdown_withsiblings(first(node)))
-    elseif ntype == CMARK_NODE_LINK
-        url, _ = linkinfo(node) # we're discarding the title
-        Markdown.Link(markdown_withsiblings(first(node)), url)
-    elseif ntype == CMARK_NODE_IMAGE
-        url, _ = linkinfo(node) # we're discarding the title
-        # TODO: we will also discard the alt text, since Julia only supports string, but
-        # CommonMark allows for arbitrary formatting.
-        Markdown.Image(url, "")
 
-    # Extension nodes
-    elseif ntype == :CMARK_NODE_STRIKETHROUGH
-        # TODO: we end up with a vector in a vector here
-        [
-            Markdown.Code("@raw html", "<del>"),
-            markdown_withsiblings(first(node))...,
-            Markdown.Code("@raw html", "</del>")
-        ]
-    elseif ntype == :CMARK_NODE_TABLE
-        # TODO: alignment
-        rows = markdown_withsiblings(first(node))
-        ncols = maximum(length.(rows))
-        Markdown.Table(rows, [:l for _ in 1:ncols])
-    elseif ntype == :CMARK_NODE_TABLE_ROW
-        markdown_withsiblings(first(node))
-    elseif ntype == :CMARK_NODE_TABLE_CELL
-        markdown_withsiblings(first(node))
+    # Inline
+    elseif ntype == CMARK_NODE_TEXT
+        MarkdownAST.Text(literal(node))
+    elseif ntype == CMARK_NODE_EMPH
+        MarkdownAST.Emph()
+    elseif ntype == CMARK_NODE_STRONG
+        MarkdownAST.Strong()
+    elseif ntype == CMARK_NODE_LINK
+        url, title = linkinfo(node)
+        MarkdownAST.Link(url, title)
+    elseif ntype == CMARK_NODE_IMAGE
+        url, title = linkinfo(node)
+        MarkdownAST.Image(url, title)
+    elseif ntype == CMARK_NODE_CODE
+        MarkdownAST.Code(literal(node))
+    elseif ntype == CMARK_NODE_HTML_INLINE
+        MarkdownAST.HTMLInline(literal(node))
+    # elseif ntype == CMARK_NODE_SOFTBREAK
+    #     " "
+    # elseif ntype == CMARK_NODE_LINEBREAK
+    #     # TODO: not really supported by Base Markdown?
+    #     "\n"
+
+    # elseif ntype == CMARK_NODE_CUSTOM_INLINE
+
+    # # Extension nodes
+    # elseif ntype == :CMARK_NODE_STRIKETHROUGH
+    #     # TODO: MarkdownAST doesn't currently implement strikethrough
+    #     # TODO: we end up with a vector in a vector here
+    #     [
+    #         Markdown.Code("@raw html", "<del>"),
+    #         markdown_withsiblings(first(node))...,
+    #         Markdown.Code("@raw html", "</del>")
+    #     ]
+    # elseif ntype == :CMARK_NODE_TABLE
+    #     # TODO: alignment
+    #     rows = markdown_withsiblings(first(node))
+    #     ncols = maximum(length.(rows))
+    #     Markdown.Table(rows, [:l for _ in 1:ncols])
+    # elseif ntype == :CMARK_NODE_TABLE_ROW
+    #     markdown_withsiblings(first(node))
+    # elseif ntype == :CMARK_NODE_TABLE_CELL
+    #     markdown_withsiblings(first(node))
     else
         error("Node type $(ntype) not implemented")
     end
+    mdast_node = MarkdownAST.Node(element)
+    if first_child(node) !== nothing
+        # TODO: a possible error condition he is that we might try to append children to
+        # elements that do not support them (MarkdownAST throws an error), but for some
+        # reason in the libcmark AST they have children.
+        child = first_child(node)
+        while !isnothing(child)
+            push!(mdast_node, markdownast(child))
+            child = next(child)
+        end
+    end
+    return mdast_node
 end
-
-markdown(s::AbstractString) = markdown(parse_document_gfm(s))
 
 function typetree(node::CMarkNode; level=0)
     n = node
     while !isnothing(n)
-        c = first(n)
+        c = first_child(n)
         if isnothing(c)
             println("\t"^level, nodetype(n))
         else
@@ -201,8 +212,6 @@ function typetree(node::CMarkNode; level=0)
         n = next(n)
     end
 end
-
-export markdown
 
 function __init__()
     # Initialize the default libcmark library

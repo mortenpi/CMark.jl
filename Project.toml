@@ -6,14 +6,14 @@ version = "0.1.0"
 [deps]
 Compat = "34da2185-b29b-5c13-b0c7-acf172513d20"
 Libdl = "8f399da3-3557-5675-b5ff-fb832c97cbdb"
-Markdown = "d6f4376e-aef5-505a-96c1-9c027394607a"
+MarkdownAST = "d0879d2d-cac2-40c8-9cee-1863dc0c7391"
 cmark_gfm_jll = "a3df0bfa-898a-51af-9696-aaeb342b5108"
 
 [compat]
 Compat = "3"
-julia = "1.6"
 cmark_gfm_jll = "0.29.0"
 cmark_jll = "0.30.2"
+julia = "1.6"
 
 [extras]
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
