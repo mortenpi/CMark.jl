@@ -40,11 +40,12 @@ function init!(libcmark::CMarkLibrary{LIBCM,LIBCMX}) where {LIBCM, LIBCMX}
 
     # Not entirely sure about the RTLD_* options here, but I am borrowing them from the JLL
     # library.
-    h = Libdl.dlopen(LIBCMX, RTLD_LAZY | RTLD_DEEPBIND)
-    CMARK_NODE_STRIKETHROUGH[] = unsafe_load(Ptr{Cint}(dlsym(h, :CMARK_NODE_STRIKETHROUGH)))
-    CMARK_NODE_TABLE[] = unsafe_load(Ptr{Cint}(dlsym(h, :CMARK_NODE_TABLE)))
-    CMARK_NODE_TABLE_ROW[] = unsafe_load(Ptr{Cint}(dlsym(h, :CMARK_NODE_TABLE_ROW)))
-    CMARK_NODE_TABLE_CELL[] = unsafe_load(Ptr{Cint}(dlsym(h, :CMARK_NODE_TABLE_CELL)))
+    Libdl.dlopen(LIBCMX, RTLD_LAZY | RTLD_DEEPBIND) do h
+        CMARK_NODE_STRIKETHROUGH[] = unsafe_load(Ptr{Cint}(dlsym(h, :CMARK_NODE_STRIKETHROUGH)))
+        CMARK_NODE_TABLE[] = unsafe_load(Ptr{Cint}(dlsym(h, :CMARK_NODE_TABLE)))
+        CMARK_NODE_TABLE_ROW[] = unsafe_load(Ptr{Cint}(dlsym(h, :CMARK_NODE_TABLE_ROW)))
+        CMARK_NODE_TABLE_CELL[] = unsafe_load(Ptr{Cint}(dlsym(h, :CMARK_NODE_TABLE_CELL)))
+    end
 end
 
 """
