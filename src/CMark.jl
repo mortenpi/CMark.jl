@@ -190,7 +190,7 @@ function markdownast(node::CMarkNode)
         # reason in the libcmark AST they have children.
         child = first_child(node)
         while !isnothing(child)
-            push!(mdast_node, markdownast(child))
+            push!(mdast_node.children, markdownast(child))
             child = next(child)
         end
     end
