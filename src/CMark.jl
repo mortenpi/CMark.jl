@@ -1,7 +1,6 @@
 module CMark
 using MarkdownAST: MarkdownAST
 using Libdl
-using Compat
 using cmark_gfm_jll: cmark_gfm_jll
 
 include("ccalls.jl")
